@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Öğrenci Paneli</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .scrollable-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+        }
+        .ders-item {
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .ders-item:last-child {
+            border-bottom: none;
+        }
+        .ders-item.selected {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .hidden-checkbox {
+            display: none;
+        }
+        #searchBox {
+            margin-bottom: 10px;
+        }
+        #seciliDersler {
+            margin-top: 30px;
+        }
+        .remove-btn {
+            float: right;
+            color: red;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .remove-btn:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+
+        <!-- Kullanıcı bilgisi ve çıkış -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">Aldığınız Dersleri Seçiniz</h3>
+            <div class="d-flex align-items-center gap-3">
+                <div class="px-3 py-1 border border-primary rounded-pill text-primary fw-semibold shadow-sm">
+                    Öğrenci: {{ student_no }}
+                </div>
+                <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Çıkış Yap</a>
+            </div>
+        </div>
+
+        <form method="post" id="dersForm">
+            {% csrf_token %}
+            <input type="text" id="searchBox" class="form-control" placeholder="Ders Ara...">
+
+            <div class="scrollable-list mb-3" id="dersListesi">
+                {% for ders in dersler %}
+                    {% with ders.kod|add:" - "|add:ders.ad as full_name %}
+                    <div class="ders-item {% if full_name in selected_ids %}selected{% endif %}" onclick="toggleSelection(this)">
+                        <input type="checkbox" name="dersler" value="{{ full_name }}" class="hidden-checkbox"
+                            {% if full_name in selected_ids %}checked{% endif %}>
+                        <span class="ders-text">{{ full_name }}</span>
+                    </div>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+
+            <div class="row mb-3 justify-content-start">
+                <div class="col-auto">
+                    <button type="button" class="btn btn-secondary" onclick="gosterSecilenler()">Seçilenleri Gör</button>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Programı Oluştur</button>
+                </div>
+            </div>
+        </form>
+
+        {% if ogrenci_programi %}
+        <div class="mt-4">
+            <h5>Seçtiğiniz Derslere Ait Program</h5>
+            <div style="overflow-x:auto;">
+                <table class="table table-bordered text-center align-middle">
+                    <thead>
+                        <tr>
+                            <th>Gün</th>
+                            <th>Saat</th>
+                            <th>Ders</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gun, saat, ders in ogrenci_programi %}
+                            <tr>
+                                <td>{{ gun }}</td>
+                                <td>{{ saat }}</td>
+                                <td>{{ ders }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <div id="seciliDersler" class="mt-4" style="display: none;">
+            <h5>Seçilen Dersler:</h5>
+            <div id="seciliDersListesi" class="scrollable-list list-group"></div>
+        </div>
+    </div>
+
+    <script>
+        const secilenDersler = {{ selected_ids|safe }};
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.ders-item').forEach(function (item) {
+                const dersText = item.querySelector('.ders-text').innerText.trim();
+                if (secilenDersler.includes(dersText)) {
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    checkbox.checked = true;
+                    item.classList.add('selected');
+                }
+            });
+        });
+
+        function toggleSelection(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            item.classList.toggle('selected');
+            checkbox.checked = !checkbox.checked;
+            guncelleSecimleriOturuma();
+        }
+
+        function guncelleSecimleriOturuma() {
+            const secilenler = document.querySelectorAll('.ders-item input:checked');
+            const dersler = Array.from(secilenler).map(cb =>
+                cb.parentElement.querySelector('.ders-text').innerText
+            );
+
+            fetch('/ders-secimi-kaydet/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ dersler: dersler })
+            }).then(res => res.json()).then(data => {
+                console.log('Oturuma kayıt sonucu:', data);
+            });
+        }
+
+        document.getElementById('searchBox').addEventListener('input', function () {
+            const filter = this.value.toLowerCase();
+            const dersItems = document.querySelectorAll('#dersListesi .ders-item');
+            dersItems.forEach(function (item) {
+                const text = item.querySelector('.ders-text').innerText.toLowerCase();
+                item.style.display = text.includes(filter) ? 'block' : 'none';
+            });
+        });
+
+        function gosterSecilenler() {
+            const seciliAlan = document.getElementById('seciliDersler');
+            const liste = document.getElementById('seciliDersListesi');
+            liste.innerHTML = '';
+
+            const secilenler = document.querySelectorAll('.ders-item input:checked');
+
+            if (secilenler.length === 0) {
+                liste.innerHTML = `
+                    <div class="list-group-item text-center text-muted">
+                        Henüz ders seçimi yapmadınız.
+                    </div>
+                `;
+                seciliAlan.style.display = 'block';
+                return;
+            }
+
+            secilenler.forEach(function (checkbox) {
+                const dersText = checkbox.parentElement.querySelector('.ders-text').innerText;
+                const li = document.createElement('div');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+                li.innerHTML = `
+                    <span>${dersText}</span>
+                    <span class="remove-btn" onclick="kaldirDers('${dersText.replace(/'/g, "\\'")}')">x</span>
+                `;
+
+                liste.appendChild(li);
+            });
+
+            seciliAlan.style.display = 'block';
+            seciliAlan.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function kaldirDers(dersText) {
+            const dersItems = document.querySelectorAll('.ders-item');
+            dersItems.forEach(function (item) {
+                const currentText = item.querySelector('.ders-text').innerText;
+                if (currentText === dersText) {
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    checkbox.checked = false;
+                    item.classList.remove('selected');
+
+                    fetch('/ders-sil/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify({ ders: dersText })
+                    });
+                }
+            });
+
+            gosterSecilenler();
+        }
+    </script>
+</body>
+</html>

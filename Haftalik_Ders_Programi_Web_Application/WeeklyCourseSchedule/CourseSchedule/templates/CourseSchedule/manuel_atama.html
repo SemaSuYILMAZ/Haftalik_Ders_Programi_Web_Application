@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Manuel Ders Atama</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="p-4">
+    <div class="mt-4 text-start" style="margin-left: 90px;">
+        <a href="/admin/" class="btn btn-secondary">Geri</a>
+    </div>
+    <div class="container">
+        <h2 class="mb-4">Manuel Ders Atama</h2>
+
+        <!-- Ders Seçimi -->
+        <form method="get">
+            <div class="mb-3">
+                <label for="ders" class="form-label">Ders Seçin:</label>
+                <select id="ders" name="ders_id" class="form-select">
+                    <option value="">-- Ders Seçin --</option>
+                    {% for ders in dersler %}
+                        <option value="{{ ders.pk }}" {% if secilen_ders and secilen_ders.pk == ders.pk %}selected{% endif %}>
+                            ({{ ders.ders_kodu }}) {{ ders.ders_adi }} - {{ ders.haftalik_saat }} saat
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Dersi Göster</button>
+        </form>
+
+        {% if secilen_ders %}
+        <!-- Ders Silme -->
+        <form method="post" class="mt-3">
+            {% csrf_token %}
+            <input type="hidden" name="ders_id" value="{{ secilen_ders.pk }}">
+            <button type="submit" name="sil" class="btn btn-danger">Excel'den Bu Dersi Sil</button>
+        </form>
+        {% endif %}
+
+        <!-- Mevcut Ders Programı -->
+        <h4 class="mt-5">Mevcut Ders Programı</h4>
+        <table class="table table-bordered">
+            {% for row in excel_tablo %}
+                <tr>
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+
+        {% if mevcut_saat and mevcut_derslik %}
+        <div class="mb-4">
+            <p><strong>Mevcut Saat:</strong> {{ mevcut_saat }}</p>
+            <p><strong>Mevcut Derslik:</strong> {{ mevcut_derslik }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Bilgisayar Mühendisliği -->
+        {% if alternatifler_bm %}
+        <h4 class="mb-3">Bilgisayar Mühendisliği - Uygun Saat ve Derslikler</h4>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="ders_id" value="{{ secilen_ders.pk }}">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Gün</th>
+                        <th>Saat</th>
+                        <th>Derslik</th>
+                        <th>Seç</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for secenek in alternatifler_bm %}
+                    <tr>
+                        <td>{{ secenek.gun }}</td>
+                        <td>{{ secenek.saat }}</td>
+                        <td>
+                            {% if secenek.derslik %}
+                                <select name="derslik_{{ secenek.gun }}_{{ secenek.saat }}" class="form-select">
+                                    {% for derslik in secenek.derslik %}
+                                        <option value="{{ derslik }}">{{ derslik }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <em>Uygun derslik yok</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <input type="checkbox" name="secimler_bm" value="{{ secenek.gun }}|{{ secenek.saat }}">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <button type="submit" name="atama_bm" class="btn btn-success">Atamayı Kaydet</button>
+        </form>
+        {% endif %}
+
+        <!-- Yazılım Mühendisliği -->
+        {% if alternatifler_ysm %}
+        <h4 class="mt-4 mb-3">Yazılım Mühendisliği - Uygun Saat ve Derslikler</h4>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="ders_id" value="{{ secilen_ders.pk }}">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Gün</th>
+                        <th>Saat</th>
+                        <th>Derslik</th>
+                        <th>Seç</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for secenek in alternatifler_ysm %}
+                    <tr>
+                        <td>{{ secenek.gun }}</td>
+                        <td>{{ secenek.saat }}</td>
+                        <td>
+                            {% if secenek.derslik %}
+                                <select name="derslik_{{ secenek.gun }}_{{ secenek.saat }}" class="form-select">
+                                    {% for derslik in secenek.derslik %}
+                                        <option value="{{ derslik }}">{{ derslik }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <em>Uygun derslik yok</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <input type="checkbox" name="secimler_ysm" value="{{ secenek.gun }}|{{ secenek.saat }}">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <button type="submit" name="atama_ysm" class="btn btn-success">Atamayı Kaydet</button>
+        </form>
+        {% endif %}
+    </div>
+</body>
+</html>

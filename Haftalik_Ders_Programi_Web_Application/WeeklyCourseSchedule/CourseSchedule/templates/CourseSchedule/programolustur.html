@@ -1,0 +1,88 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Ders Programı{% endblock %}
+
+{% block branding %}
+  <h1 id="site-name"><a href="{% url 'admin:index' %}">Ders Programı Yönetim Paneli</a></h1>
+{% endblock %}
+
+{% block content %}
+
+  <h1>Program Oluştur</h1>
+
+  {% if excel_dosyasi_var %}
+    <a href="{{ excel_url }}" class="btn btn-success">Ders Programını İndir (Excel)</a>
+    <br><br>
+
+    <div style="margin-top: 20px; overflow-x:auto;">
+      <h2>Ders Programı</h2>
+      <table border="1" cellspacing="0" cellpadding="5">
+        <thead>
+          <!-- 1. Satır: Bölüm + Bilgisayar Mühendisliği -->
+          <tr>
+            <th colspan="2">{{ excel_tablo.0.0 }}</th>
+            <th colspan="4">{{ excel_tablo.0.2 }}</th>
+          </tr>
+
+          <!-- 2. Satır: Gün/Saatler + Sınıflar -->
+          <tr>
+            <th colspan="2">{{ excel_tablo.1.0 }}</th>
+            {% for cell in excel_tablo.1|slice:"2:" %}
+              <th>{{ cell }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+            {% for row in excel_tablo|slice:"2:" %}
+              <tr>
+                {% if forloop.counter0 == 62 %}
+                  <td colspan="2">Bölüm</td>
+                  <td colspan="4">{{ row.2 }}</td>
+
+                {% elif forloop.counter0 == 63 %}
+                  <td colspan="2">Gün / Saatler</td>
+                  <td class="class-column">1.Sınıf</td>
+                  <td class="class-column">2.Sınıf</td>
+                  <td class="class-column">3.Sınıf</td>
+
+                {% elif forloop.counter0 == 60 or forloop.counter0 == 61 %}
+                  {% for cell in row %}
+                    <td></td>
+                  {% endfor %}
+
+                {% else %}
+                  {% for cell in row %}
+                    {% if cell == 'None' or cell == None %}
+                      <td></td>
+                    {% elif forloop.counter0 >= 2 %}
+                      <td class="class-column">{{ cell }}</td>
+                    {% else %}
+                      <td>{{ cell }}</td>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              </tr>
+            {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>Henüz oluşturulmuş bir ders programı yok.</p>
+  {% endif %}
+
+  <style>
+    th, td {
+      word-wrap: break-word;
+      text-align: center;
+      padding: 8px;
+    }
+
+    .class-column {
+      width: 200px;
+    }
+
+    th:nth-child(5), td:nth-child(5) {
+      width: 200px;
+    }
+  </style>
+
+{% endblock %}
